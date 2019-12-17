@@ -107,9 +107,14 @@ def setUpEmotion(emotion_data, spotify_data, cur, conn):
 def setUpEmotify(cur, conn):
     
     selected = "SELECT Emotion.Count, Emotion.TextID, Emotion.BoredEmotion, Sentiment.NegativeSentiment, Recommendations.SpotifyID, Recommendations.Song, Recommendations.Artist, Features.Energy, Features.Valence FROM Emotion JOIN Sentiment ON Sentiment.Count = Emotion.Count JOIN Features ON Features.ROWID = Sentiment.Count JOIN Recommendations ON Recommendations.ROWID = Features.ROWID"
-
+    data = cur.execute(selected)
     f = open("output.txt", "w")
-    f.write("EMOTIFY DATABASE" + selected)
+
+    for row in data:
+        f.write(str(row))
+        f.write(" ")
+
+
     f.close()
 
 def calculatePercentageDifference(cur, conn):
@@ -118,10 +123,10 @@ def calculatePercentageDifference(cur, conn):
 def main():
 
     # https://developer.spotify.com/documentation/web-api/reference/browse/get-recommendations/
-    recommendationToken = 'BQB4Romybw4iAhiMGX67hHb1ENOv9m9_-TrisjOeG-uLhkYdki3V9De20LNnuBY5CUe8QRiJgO5VD3hXWf2yB71M9qCIuoawgqgS0CrhFNjEw--nmPlWokNwh7p_JjoFALRKAhX8gRcL0Xg'
+    recommendationToken = 'BQA5XrEDIgACkwpi4mt4fmhUIFdfx_thjUP1EzSRWCwuhbREjTQWO6KmktGqr-1Aj1NPBuDDyPmAUHYkPu7hStYiWEStNmBINwZEfu2XietzCYKIq0WcSeNh--qapdocB6nC8_vMsctSXl4'
 
     # https://developer.spotify.com/documentation/web-api/reference/tracks/ choose the link to /v1/audio-features/{id}
-    featureToken = 'BQDCZL8oFB5gLilsZb_6_e6jkVC-_tGDyghvWe1iZydwFQ8r7GAfsxrZNllxZfd9Q56uj5enQJ-Hgd29MOPuBvTfo0jShYC4EqDkRmuT6iTTzqekIbFU4BGs15nM3dW78X-0Lykn19bgRYM'
+    featureToken = 'BQCYkivBrmLZs6EDJxeyogRHO5B_tmmilvp-rauSyHa4OSTQdHY4ngMrCKfipT3KFYF3vGzCIpiyZHotNi_H-8mImCSu43gR2DWLkaGBNgiukw13NbWXhebQZ4aW1rAoB1P9ZrDgJ_Ixcl4'
 
     paralleldots.set_api_key("DZIrsJkyFYAvJAImeF1pCJrk2Tf7vBcrCo978uLgvvg")
 
