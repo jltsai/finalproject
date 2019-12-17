@@ -6,9 +6,12 @@ import paralleldots
 
 
 # Name: Helen Song, Jennifer Tsai
+
 # Final Project: Emotify
+
 # Description: From a list of strings, the ParallelDots API will collect the emotion and sentiment of each string. 
 # This data will then be used to set the target energy and valence values to recommend songs using the Spotify API.
+# We then calculate the percent match the recommended song is to the sentiment/emotion of the input text string.
 
 def setUpDatabase(db_name):
     path = os.path.dirname(os.path.abspath(__file__))
@@ -28,9 +31,10 @@ def setUpSpotifyRecommendations(data, cur, conn):
         artists.append(item['artists'][0]['name'])
         spotify_ids.append(item['uri'].split('spotify:track:')[1])
 
-    cur.execute("CREATE TABLE IF NOT EXISTS Recommendations (Song TEXT, Artist TEXT, SpotifyID TEXT)")
+
+    cur.execute("CREATE TABLE IF NOT EXISTS Recommendations (SpotifyID TEXT PRIMARY KEY, Song TEXT, Artist TEXT)")
     for i in range(len(songs)):
-        cur.execute("INSERT OR IGNORE INTO Recommendations (Song,Artist,SpotifyID) VALUES(?,?,?)",(songs[i], artists[i], spotify_ids[i]))
+        cur.execute("INSERT OR IGNORE INTO Recommendations (SpotifyID,Song,Artist) VALUES(?,?,?)",(spotify_ids[i], songs[i], artists[i]))
     conn.commit()
 
 def setUpSpotifyFeatures(data, cur, conn):
@@ -45,7 +49,7 @@ def setUpSpotifyFeatures(data, cur, conn):
     feature_headers = {
     'Accept': 'application/json',
     'Content-Type': 'application/json',
-    'Authorization': 'Bearer BQA9upqFcFZwPJm1sV76UGH4SS4ZS2uVPpOTsdnp4WyiLbAEiHFwyxsiXEgV9S_Ns6uOKQTmvfZwy9LdKy-sbE5qlJrzZboHZmc7sB5R5P6xQ1QAPvIqhRCjZtbZIw6vCwPMG_5pRk_-vNU',
+    'Authorization': 'Bearer BQASh4EFucuEqxU7JY7sDJ7gc4FdnRbrsBYV2lURlIZnOpwqJnpsuzRheH5moF6uyTrtsDttKll0AAsVOLCT-7Wu4PBaJuZrTKyQLpukHqooGQ_jNd-_lT6TxdLwlvHiQ4PsavyVx3BGacE',
     }
 
     for i in range(len(spotify_ids)):
@@ -55,9 +59,9 @@ def setUpSpotifyFeatures(data, cur, conn):
         energy.append(spotifyFeat['energy'])
         valence.append(spotifyFeat['valence'])
 
-    cur.execute("CREATE TABLE IF NOT EXISTS Features (Energy FLOAT, Valence FLOAT, SpotifyID TEXT)")
+    cur.execute("CREATE TABLE IF NOT EXISTS Features (SpotifyID TEXT PRIMARY KEY, Energy FLOAT, Valence FLOAT)")
     for i in range(len(energy)):
-        cur.execute("INSERT OR IGNORE INTO Features (Energy,Valence,SpotifyID) VALUES(?,?,?)",(energy[i], valence[i], spotify_ids[i]))
+        cur.execute("INSERT OR IGNORE INTO Features (SpotifyID,Energy,Valence) VALUES(?,?,?)",(spotify_ids[i], energy[i], valence[i]))
         
 
 def setUpSentimentTable(data, cur, conn):
@@ -71,9 +75,9 @@ def setUpSentimentTable(data, cur, conn):
         neutral.append(item['neutral'])
         positive.append(item['positive'])
 
-    cur.execute("CREATE TABLE IF NOT EXISTS Sentiment (Negative FLOAT, Neutral FLOAT, Positive FLOAT, TextID INT)")
+    cur.execute("CREATE TABLE IF NOT EXISTS Sentiment (TextID INT PRIMARY KEY, Negative FLOAT, Neutral FLOAT, Positive FLOAT)")
     for i in range(len(negative)):
-        cur.execute("INSERT OR IGNORE INTO Sentiment (Negative,Neutral,Positive,TextID) VALUES(?,?,?,?)",(negative[i], neutral[i], positive[i], i))
+        cur.execute("INSERT INTO Sentiment (TextID,Negative,Neutral,Positive) VALUES(?,?,?,?)",(i, negative[i], neutral[i], positive[i]))
     
 
 def setUpEmotionTable(data, cur, conn):
@@ -93,10 +97,23 @@ def setUpEmotionTable(data, cur, conn):
         excited.append(item['Excited'])
         fear.append(item['Fear'])
 
-    cur.execute("CREATE TABLE IF NOT EXISTS Emotion (Bored FLOAT, Sad FLOAT, Happy FLOAT, Angry FLOAT, Excited FLOAT, Fear FLOAT, TextID INT)")
+    cur.execute("CREATE TABLE IF NOT EXISTS Emotion (TextID INT PRIMARY KEY, Bored FLOAT, Sad FLOAT, Happy FLOAT, Angry FLOAT, Excited FLOAT, Fear FLOAT)")
     for i in range(len(bored)):
-        cur.execute("INSERT OR IGNORE INTO Emotion (Bored,Sad,Happy,Angry,Excited,Fear,TextID) VALUES(?,?,?,?,?,?,?)",(bored[i], sad[i], happy[i], angry[i], excited[i], fear[i], i))
+        cur.execute("INSERT INTO Emotion (TextID,Bored,Sad,Happy,Angry,Excited,Fear) VALUES(?,?,?,?,?,?,?)",(i, bored[i], sad[i], happy[i], angry[i], excited[i], fear[i]))
     conn.commit()
+
+
+def setUpTextIDs(cur, conn):
+
+    text_id = [0, 1, 2, 3, 4]
+    num_repeat = 20
+    text_ids = [item for item in text_id for i in range(num_repeat)]
+
+    cur.execute("CREATE TABLE IF NOT EXISTS TextIDs (TextID INT)")
+    for i in range(len(text_ids)):
+        cur.execute("INSERT INTO TextIDs (TextID) VALUES(?)", (text_ids[i], ))
+    conn.commit()
+
 
 def main():
 
@@ -130,7 +147,7 @@ def main():
         recommendation_headers = {
             'Accept': 'application/json',
             'Content-Type': 'application/json',
-            'Authorization': 'Bearer BQB7vrB83r6JZDLcpKp2E0pT_eYKEYS2yDoIFrui4HrcUpGEUr0NJnoD5zCQeM9nhH4z5GUnebuAoLE6fEC_YrTppDoVTKKVCekVzwXLyNd7tw-2nNH4ockczTywaQCgNth4yRXM0D0wsCk',
+            'Authorization': 'Bearer BQA-fThAd_uJEkHOu46rBpvFAkW2xQorYd8CWVzytrB0M5XBeqRQK92qyjfTVVTZ9z0D9TAMn-LsJu6efwCJKvPn-f0hbnr7hu77cTAVyCuoVRgr0Zm-TcftzPwVMQzvATkh2-kTgaFZnso',
         }
 
         recommendation_params = (
@@ -148,6 +165,8 @@ def main():
         setUpSpotifyRecommendations(spotifyRecs, cur, conn)
         setUpSpotifyFeatures(spotifyRecs, cur, conn)
         conn.commit()
+
+    setUpTextIDs(cur, conn)
 
 
 if __name__ == "__main__":
