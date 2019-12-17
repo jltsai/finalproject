@@ -108,10 +108,9 @@ def setUpEmotify(cur, conn):
     
     selected = "SELECT Emotion.Count, Emotion.TextID, Emotion.BoredEmotion, Sentiment.NegativeSentiment, Recommendations.SpotifyID, Recommendations.Song, Recommendations.Artist, Features.Energy, Features.Valence FROM Emotion JOIN Sentiment ON Sentiment.Count = Emotion.Count JOIN Features ON Features.ROWID = Sentiment.Count JOIN Recommendations ON Recommendations.ROWID = Features.ROWID"
 
-    cur.execute("CREATE TABLE IF NOT EXISTS Emotify (Count INT, TextID INT, BoredEmotion FLOAT, NegativeSentiment FLOAT, SpotifyID TEXT, Song TEXT, Artist TEXT, Energy FLOAT, Valence FLOAT)")
-    cur.execute("INSERT OR IGNORE INTO Emotify (Count,TextID,BoredEmotion,NegativeSentiment,SpotifyID,Song,Artist,Energy,Valence)" + selected)
-    conn.commit()
-
+    f = open("output.txt", "w")
+    f.write("EMOTIFY DATABASE" + selected)
+    f.close()
 
 def calculatePercentageDifference(cur, conn):
     pass
@@ -119,10 +118,10 @@ def calculatePercentageDifference(cur, conn):
 def main():
 
     # https://developer.spotify.com/documentation/web-api/reference/browse/get-recommendations/
-    recommendationToken = 'BQABbSBqHWB9iSqkYX7OzzfngWQp50kR1lZS3ecdvjYlWTtCp9bFpARe-zfJYDc5KFFKaPibDtQxSXwJR7n3pFgGytq0s7kM4KGh_-tP8PfQJVP3Eq8b3E6kYrbGaPLxAVvzn-Ps8ZqLCMQ'
+    recommendationToken = 'BQB4Romybw4iAhiMGX67hHb1ENOv9m9_-TrisjOeG-uLhkYdki3V9De20LNnuBY5CUe8QRiJgO5VD3hXWf2yB71M9qCIuoawgqgS0CrhFNjEw--nmPlWokNwh7p_JjoFALRKAhX8gRcL0Xg'
 
     # https://developer.spotify.com/documentation/web-api/reference/tracks/ choose the link to /v1/audio-features/{id}
-    featureToken = 'BQA4oTRQPTK9vgjcpgrigZtQWYM-Fhu16t-lsg9cTh4_DemQMEieBRAE4g_Jyve0wrEM68hHpzBgJoLfJm9dBrjzKck0xuo9l0FJaOJ9CWJKz_4x3bkFqBpfca2FzpxoJ7HH15TC0o3AwyY'
+    featureToken = 'BQDCZL8oFB5gLilsZb_6_e6jkVC-_tGDyghvWe1iZydwFQ8r7GAfsxrZNllxZfd9Q56uj5enQJ-Hgd29MOPuBvTfo0jShYC4EqDkRmuT6iTTzqekIbFU4BGs15nM3dW78X-0Lykn19bgRYM'
 
     paralleldots.set_api_key("DZIrsJkyFYAvJAImeF1pCJrk2Tf7vBcrCo978uLgvvg")
 
@@ -133,6 +132,11 @@ def main():
     "I would have gotten the promotion, but my attendance wasn’t good enough.",
     "I was very proud of my nickname throughout high school but today- I couldn’t be any different to what my nickname was.",
     "I really want to go to work, but I am too sick to drive."]
+
+    cur.execute("DELETE FROM Recommendations WHERE EXISTS (SELECT * FROM Recommendations)")
+    cur.execute("DELETE FROM Features WHERE EXISTS (SELECT * FROM Features)")
+    cur.execute("DELETE FROM Sentiment WHERE EXISTS (SELECT * FROM Sentiment)")
+    cur.execute("DELETE FROM Emotion WHERE EXISTS (SELECT * FROM Emotion)")
 
     sentiment_text=paralleldots.batch_sentiment(input_text)
 
