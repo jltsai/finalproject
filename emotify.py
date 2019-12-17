@@ -66,88 +66,65 @@ def setUpSpotifyFeatures(featureToken, data, cur, conn):
         cur.execute("INSERT OR IGNORE INTO Features (SpotifyID,Energy,Valence) VALUES(?,?,?)",(spotify_ids[i], energy[i], valence[i]))
         
 
-def setUpSentimentTable(data, cur, conn):
-
-    negative = []
-    neutral = []
-    positive = []
-
-    for item in data['sentiment']:
-        negative.append(item['negative'])
-        neutral.append(item['neutral'])
-        positive.append(item['positive'])
-
-    cur.execute("CREATE TABLE IF NOT EXISTS Sentiment (TextID INT PRIMARY KEY, Negative FLOAT, Neutral FLOAT, Positive FLOAT)")
-    for i in range(len(negative)):
-        cur.execute("INSERT OR IGNORE INTO Sentiment (TextID,Negative,Neutral,Positive) VALUES(?,?,?,?)",(i, negative[i], neutral[i], positive[i]))
-    
-
-def setUpEmotionTable(data, cur, conn):
-
-    bored = []
-    sad = []
-    happy = []
-    angry = []
-    excited = []
-    fear = []
-
-    for item in data['emotion']:
-        bored.append(item['Bored'])
-        sad.append(item['Sad'])
-        happy.append(item['Happy'])
-        angry.append(item['Angry'])
-        excited.append(item['Excited'])
-        fear.append(item['Fear'])
-
-    cur.execute("CREATE TABLE IF NOT EXISTS Emotion (TextID INT PRIMARY KEY, Bored FLOAT, Sad FLOAT, Happy FLOAT, Angry FLOAT, Excited FLOAT, Fear FLOAT)")
-    for i in range(len(bored)):
-        cur.execute("INSERT OR IGNORE INTO Emotion (TextID,Bored,Sad,Happy,Angry,Excited,Fear) VALUES(?,?,?,?,?,?,?)",(i, bored[i], sad[i], happy[i], angry[i], excited[i], fear[i]))
-    conn.commit()
-
-
-def setUpTextAnalysis(sentiment_data, emotion_data, spotify_data, cur, conn):
+def setUpSentiment(sentiment_data, spotify_data, cur, conn):
 
     text_id = [0, 1, 2, 3, 4]
     num_repeat = 20
     text_ids = [item for item in text_id for i in range(num_repeat)]
 
     negative_valence = []
-    bored_energy = []
 
     for item in sentiment_data['sentiment']:
         negative_valence.append(str(item['negative']))
 
+    negative_values = [item for item in negative_valence for i in range(num_repeat)]
+
+    cur.execute("CREATE TABLE IF NOT EXISTS Sentiment (Count INT, TextID INT, NegativeSentiment FLOAT)")
+    for i in range(len(text_ids)):
+        cur.execute("INSERT OR IGNORE INTO Sentiment (Count,TextID,NegativeSentiment) VALUES(?,?,?)", (i+1, text_ids[i], negative_values[i]))
+    conn.commit()
+
+
+def setUpEmotion(emotion_data, spotify_data, cur, conn):
+
+    text_id = [0, 1, 2, 3, 4]
+    num_repeat = 20
+    text_ids = [item for item in text_id for i in range(num_repeat)]
+
+    bored_energy = []
+
     for item in emotion_data['emotion']:
         bored_energy.append(str(item['Bored']))
 
-    negative_values = [item for item in negative_valence for i in range(num_repeat)]
     bored_values = [item for item in bored_energy for i in range(num_repeat)] 
 
-    cur.execute("CREATE TABLE IF NOT EXISTS TextAnalysis (Count INT, TextID INT, NegativeSentiment FLOAT, BoredEmotion FLOAT)")
+    cur.execute("CREATE TABLE IF NOT EXISTS Emotion (Count INT, TextID INT, BoredEmotion FLOAT)")
     for i in range(len(text_ids)):
-        cur.execute("INSERT OR IGNORE INTO TextAnalysis (Count,TextID,NegativeSentiment,BoredEmotion) VALUES(?,?,?,?)", (i+1, text_ids[i], negative_values[i], bored_values[i]))
+        cur.execute("INSERT OR IGNORE INTO Emotion (Count,TextID,BoredEmotion) VALUES(?,?,?)", (i+1, text_ids[i], bored_values[i]))
     conn.commit()
 
 
 def setUpEmotify(cur, conn):
-
-    selected = "SELECT TextAnalysis.*, Features.*, Recommendations.* FROM TextAnalysis JOIN Features ON Features.ROWID = TextAnalysis.Count JOIN Recommendations ON Recommendations.ROWID = Features.ROWID"
     
-    cur.execute("CREATE TABLE IF NOT EXISTS Emotify (Count INT, TextID INT, NegativeSentiment FLOAT, BoredEmotion FLOAT, SpotifyID TEXT, Energy FLOAT, Valence FLOAT, Spotify_ID, Song TEXT, Artist TEXT)")
-    cur.execute("INSERT OR IGNORE INTO Emotify (Count,TextID,NegativeSentiment,BoredEmotion,SpotifyID,Energy,Valence,Spotify_ID,Song,Artist)" + selected)
+    selected = "SELECT Emotion.Count, Emotion.TextID, Emotion.BoredEmotion, Sentiment.NegativeSentiment, Recommendations.SpotifyID, Recommendations.Song, Recommendations.Artist, Features.Energy, Features.Valence FROM Emotion JOIN Sentiment ON Sentiment.Count = Emotion.Count JOIN Features ON Features.ROWID = Sentiment.Count JOIN Recommendations ON Recommendations.ROWID = Features.ROWID"
+
+    cur.execute("CREATE TABLE IF NOT EXISTS Emotify (Count INT, TextID INT, BoredEmotion FLOAT, NegativeSentiment FLOAT, SpotifyID TEXT, Song TEXT, Artist TEXT, Energy FLOAT, Valence FLOAT)")
+    cur.execute("INSERT OR IGNORE INTO Emotify (Count,TextID,BoredEmotion,NegativeSentiment,SpotifyID,Song,Artist,Energy,Valence)" + selected)
     conn.commit()
-    
 
+
+def calculatePercentageDifference(cur, conn):
+    pass
 
 def main():
 
     # https://developer.spotify.com/documentation/web-api/reference/browse/get-recommendations/
-    recommendationToken = 'BQD1z6lkW1tpXnWno4zkc8V8cN1FsUfltrDddJBFGXbh_U4ZJ2FENGlAkfMmAbAQ-XarOzn5ouFAM1Qk690K7adOe5YeCkH8sOa6RJ8aVvlnMDzGkwF7EBSoyIKmWjqzGdQKeuLzp1GxGA8'
+    recommendationToken = 'BQABbSBqHWB9iSqkYX7OzzfngWQp50kR1lZS3ecdvjYlWTtCp9bFpARe-zfJYDc5KFFKaPibDtQxSXwJR7n3pFgGytq0s7kM4KGh_-tP8PfQJVP3Eq8b3E6kYrbGaPLxAVvzn-Ps8ZqLCMQ'
 
     # https://developer.spotify.com/documentation/web-api/reference/tracks/ choose the link to /v1/audio-features/{id}
-    featureToken = 'BQBKKfvFuoRQ-OveAAUBsOmGm7l6xXkPWbUS8FADj5eI80VU59b71d6mfCg8BfhlSXwtwpRkTpT82saIT8ff7Xh5oO7FIS50epzuQGZ7qmuBeFVQu439Dfpj7XZMn92etMWwWYnQYrU17cE'
+    featureToken = 'BQA4oTRQPTK9vgjcpgrigZtQWYM-Fhu16t-lsg9cTh4_DemQMEieBRAE4g_Jyve0wrEM68hHpzBgJoLfJm9dBrjzKck0xuo9l0FJaOJ9CWJKz_4x3bkFqBpfca2FzpxoJ7HH15TC0o3AwyY'
 
-    paralleldots.set_api_key("CWTPMu1Z9kaCUVeghKKecMyXLbfZPpfUWEnjytlHh4Q")
+    paralleldots.set_api_key("DZIrsJkyFYAvJAImeF1pCJrk2Tf7vBcrCo978uLgvvg")
 
     cur, conn = setUpDatabase('emotify.db')
 
@@ -158,10 +135,8 @@ def main():
     "I really want to go to work, but I am too sick to drive."]
 
     sentiment_text=paralleldots.batch_sentiment(input_text)
-    setUpSentimentTable(sentiment_text, cur, conn)
 
     emotion_text=paralleldots.batch_emotion(input_text)
-    setUpEmotionTable(emotion_text, cur, conn)
     
     negative_valence = []
     bored_energy = []
@@ -198,9 +173,13 @@ def main():
     
     conn.commit()
 
-    setUpTextAnalysis(sentiment_text, emotion_text, spotifyRecs, cur, conn)
-    
+    setUpSentiment(sentiment_text, spotifyRecs, cur, conn)
+
+    setUpEmotion(emotion_text, spotifyRecs, cur, conn)
+
     setUpEmotify(cur, conn)
+
+    calculatePercentageDifference(cur, conn)
 
     
 
