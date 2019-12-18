@@ -122,16 +122,15 @@ def setUpEmotion(emotion_data, spotify_data, cur, conn):
 
 def setUpEmotify(cur, conn):
     
-    selected = "SELECT Valence.Song, Valence.Artist, (100.0 * ABS(Valence.Valence-Sentiment.NegativeSentiment)/Sentiment.NegativeSentiment), (ABS(Energy.Energy-Emotion.BoredEmotion)/Emotion.BoredEmotion) FROM Valence JOIN Sentiment ON Sentiment.Count = Valence.ROWID JOIN Energy ON Energy.ROWID= Sentiment.Count JOIN Emotion ON Emotion.Count = Energy.ROWID"
+    selected = "SELECT Valence.Song, Valence.Artist, (100.0 * ABS(Valence.Valence-Sentiment.NegativeSentiment)/Sentiment.NegativeSentiment), (ABS(Energy.Energy-Emotion.BoredEmotion)/Emotion.BoredEmotion) FROM Valence JOIN Sentiment ON Sentiment.Count = Valence.ROWID JOIN Energy ON Energy.ROWID= Sentiment.Count JOIN Emotion ON Emotion.Count = Energy.ROWID ORDER BY Sentiment.Count"
     data = cur.execute(selected)
 
     f = open("emotifyoutput.txt", "w")
-    f.write("(Recommended Song, % Change SONG Target | Valence TEXT Negative Sentiment, % Change SONG Target Energy | TEXT Bored Emotion)")
+    f.write("(Recommended Song, % Change SONG Target Valence | TEXT Negative Sentiment, % Change SONG Target Energy | TEXT Bored Emotion)")
     f.write("\n")
     f.write("\n")
     for row in data:
         f.write("(<" + str(row[0]) + "> by " + str(row[1]) + ", " + str(row[2]) + ", " + str(row[3]) + ")")
-        f.write("\n")
         f.write("\n")
     f.close()
 
@@ -141,26 +140,26 @@ def setUpEmotify(cur, conn):
 def main():
 
     # https://developer.spotify.com/documentation/web-api/reference/browse/get-recommendations/
-    recommendationToken = 'BQCxPzVzF6LlK_Jl8dQzL-GXn2Q_Gp9bZQxnOhNa9HvgAPwZbm4WEI6yH5lVsGV4Mne_6dUerPh3b_jajeg4meWfKMk-9Y3SAAkjsA7TK8O7v3tNgvFwJh2NbjpmtsrNbN7C_863FOdTKKQ'
+    recommendationToken = 'BQDzWVma4UXNlz8btF6sl5yFhvkQDpUChA0Ong0oCoVHpkqI5hLMBNWRiktgK-_fe3uHMN4YOOWt9HmvSHqY_-uou20SMHXB0I6IeXFbxs4jt7uz421JEMFTGho2thBV2SYmLwKL-NpAJAo'
 
     # https://developer.spotify.com/documentation/web-api/reference/tracks/ choose the link to /v1/audio-features/{id}
-    featureToken = 'BQAk0gQ4nkawTsAUOpt9uPDtGxTUmGWq7mtJDzK2tTljy3X3A58il5xnOp_cOhglViJKHMiFMyujDt7uf7uE89QSi8K3fRWq8ftP5mZBH9vcp6zNA8uKRN9323sg_Vp8XvgqLrTeobGDkIo'
+    featureToken = 'BQCqpNsO3CrS9AcUAS5PwTsJaGcmsEfTQljtITwdeO5BX1nS4XHQ7NggRuu46I_QlQ-YiNNLpZpTy48uhiR2lFRKLu8pXA8CoKS6dS8rz9ts_felUN3crifsX1cHPmWUMXa_UCpixgKRrDE'
 
-    paralleldots.set_api_key("DZIrsJkyFYAvJAImeF1pCJrk2Tf7vBcrCo978uLgvvg")
+    paralleldots.set_api_key("CWTPMu1Z9kaCUVeghKKecMyXLbfZPpfUWEnjytlHh4Q")
 
-    cur, conn = setUpDatabase('emotify.db')
-
-    cur.execute("DROP TABLE IF EXISTS Valence")
-    cur.execute("DROP TABLE IF EXISTS Energy")
-    cur.execute("DROP TABLE IF EXISTS Sentiment")
-    cur.execute("DROP TABLE IF EXISTS Emotion")
-    conn.commit() 
+    cur, conn = setUpDatabase('emotify.db') 
 
     input_text = ["I am counting my calories, yet I really want dessert.",
     "If you like tuna and tomato sauce- try combining the two. It’s really not as bad as it sounds.",
     "I would have gotten the promotion, but my attendance wasn’t good enough.",
     "I was very proud of my nickname throughout high school but today- I couldn’t be any different to what my nickname was.",
     "I really want to go to work, but I am too sick to drive."]
+
+    cur.execute("DROP TABLE IF EXISTS Valence")
+    cur.execute("DROP TABLE IF EXISTS Energy")
+    cur.execute("DROP TABLE IF EXISTS Sentiment")
+    cur.execute("DROP TABLE IF EXISTS Emotion")
+    conn.commit()
 
     sentiment_text=paralleldots.batch_sentiment(input_text)
 
@@ -207,6 +206,7 @@ def main():
 
     setUpEmotify(cur, conn)
 
+    conn.close()
 
 if __name__ == "__main__":
     main()
