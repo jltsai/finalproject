@@ -23,29 +23,45 @@ def setUpDatabase(db_name):
     return cur, conn
 
 
-def setUpSpotifyRecommendations(data, cur, conn):
+def setUpSpotifyValence(featureToken, data, cur, conn):
 
     songs = []
     artists = []
     spotify_ids = []
+    valence = []
 
     for item in data['tracks']:
         songs.append(item['name']) 
         artists.append(item['artists'][0]['name'])
         spotify_ids.append(item['uri'].split('spotify:track:')[1])
 
-    cur.execute("CREATE TABLE IF NOT EXISTS Recommendations (SpotifyID TEXT, Song TEXT, Artist TEXT)")
+    feature_headers = {
+    'Accept': 'application/json',
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer ' + featureToken,
+    }
+
+    for i in range(len(spotify_ids)):
+        feature_request = 'https://api.spotify.com/v1/audio-features/' + str(spotify_ids[i])
+        spotifyFeatures = requests.get(feature_request, headers=feature_headers)
+        spotifyFeat = spotifyFeatures.json()
+        valence.append(spotifyFeat['valence'])
+
+    cur.execute("CREATE TABLE IF NOT EXISTS Valence (SpotifyID TEXT, Song TEXT, Artist TEXT, Valence FLOAT)")
     for i in range(len(songs)):
-        cur.execute("INSERT OR IGNORE INTO Recommendations (SpotifyID,Song,Artist) VALUES(?,?,?)",(spotify_ids[i], songs[i], artists[i]))
+        cur.execute("INSERT OR IGNORE INTO Valence (SpotifyID,Song,Artist,Valence) VALUES(?,?,?,?)",(spotify_ids[i], songs[i], artists[i], valence[i]))
     conn.commit()
 
-def setUpSpotifyFeatures(featureToken, data, cur, conn):
+def setUpSpotifyEnergy(featureToken, data, cur, conn):
 
-    energy = []
-    valence = []
+    songs = []
+    artists = []
     spotify_ids = []
+    energy = []
 
     for item in data['tracks']:
+        songs.append(item['name']) 
+        artists.append(item['artists'][0]['name'])
         spotify_ids.append(item['uri'].split('spotify:track:')[1])
 
     feature_headers = {
@@ -59,11 +75,11 @@ def setUpSpotifyFeatures(featureToken, data, cur, conn):
         spotifyFeatures = requests.get(feature_request, headers=feature_headers)
         spotifyFeat = spotifyFeatures.json()
         energy.append(spotifyFeat['energy'])
-        valence.append(spotifyFeat['valence'])
 
-    cur.execute("CREATE TABLE IF NOT EXISTS Features (SpotifyID TEXT, Energy FLOAT, Valence FLOAT)")
+    cur.execute("CREATE TABLE IF NOT EXISTS Energy (SpotifyID TEXT, Song TEXT, Artist TEXT, Energy FLOAT)")
     for i in range(len(energy)):
-        cur.execute("INSERT OR IGNORE INTO Features (SpotifyID,Energy,Valence) VALUES(?,?,?)",(spotify_ids[i], energy[i], valence[i]))
+        cur.execute("INSERT OR IGNORE INTO Energy (SpotifyID,Song,Artist,Energy) VALUES(?,?,?,?)",(spotify_ids[i], songs[i], artists[i], energy[i]))
+    conn.commit()
         
 
 def setUpSentiment(sentiment_data, spotify_data, cur, conn):
@@ -106,16 +122,17 @@ def setUpEmotion(emotion_data, spotify_data, cur, conn):
 
 def setUpEmotify(cur, conn):
     
-    selected = "SELECT Emotion.Count, Emotion.TextID, Emotion.BoredEmotion, Sentiment.NegativeSentiment, Recommendations.SpotifyID, Recommendations.Song, Recommendations.Artist, Features.Energy, Features.Valence FROM Emotion JOIN Sentiment ON Sentiment.Count = Emotion.Count JOIN Features ON Features.ROWID = Sentiment.Count JOIN Recommendations ON Recommendations.ROWID = Features.ROWID"
+    selected = "SELECT Valence.Song, Valence.Artist, (100.0 * ABS(Valence.Valence-Sentiment.NegativeSentiment)/Sentiment.NegativeSentiment), (ABS(Energy.Energy-Emotion.BoredEmotion)/Emotion.BoredEmotion) FROM Valence JOIN Sentiment ON Sentiment.Count = Valence.ROWID JOIN Energy ON Energy.ROWID= Sentiment.Count JOIN Emotion ON Emotion.Count = Energy.ROWID"
     data = cur.execute(selected)
-    f = open("output.txt", "w")
 
+    f = open("emotifyoutput.txt", "w")
     for row in data:
-        f.write(str(row))
-        f.write(" ")
-
-
+        f.write("RECOMMENDED SONG: <" + str(row[0]) + "> BY " + str(row[1]) + " / PERCENT CHANGE BETWEEN Valence AND Negative Sentiment: " + str(row[2]) + " / PERCENT CHANGE BETWEEN Energy AND Bored Emotion: " + str(row[3]))
+        f.write("\n")
+        f.write("\n")
     f.close()
+
+    conn.commit()
 
 def calculatePercentageDifference(cur, conn):
     pass
@@ -123,25 +140,26 @@ def calculatePercentageDifference(cur, conn):
 def main():
 
     # https://developer.spotify.com/documentation/web-api/reference/browse/get-recommendations/
-    recommendationToken = 'BQA5XrEDIgACkwpi4mt4fmhUIFdfx_thjUP1EzSRWCwuhbREjTQWO6KmktGqr-1Aj1NPBuDDyPmAUHYkPu7hStYiWEStNmBINwZEfu2XietzCYKIq0WcSeNh--qapdocB6nC8_vMsctSXl4'
+    recommendationToken = 'BQCxPzVzF6LlK_Jl8dQzL-GXn2Q_Gp9bZQxnOhNa9HvgAPwZbm4WEI6yH5lVsGV4Mne_6dUerPh3b_jajeg4meWfKMk-9Y3SAAkjsA7TK8O7v3tNgvFwJh2NbjpmtsrNbN7C_863FOdTKKQ'
 
     # https://developer.spotify.com/documentation/web-api/reference/tracks/ choose the link to /v1/audio-features/{id}
-    featureToken = 'BQCYkivBrmLZs6EDJxeyogRHO5B_tmmilvp-rauSyHa4OSTQdHY4ngMrCKfipT3KFYF3vGzCIpiyZHotNi_H-8mImCSu43gR2DWLkaGBNgiukw13NbWXhebQZ4aW1rAoB1P9ZrDgJ_Ixcl4'
+    featureToken = 'BQAk0gQ4nkawTsAUOpt9uPDtGxTUmGWq7mtJDzK2tTljy3X3A58il5xnOp_cOhglViJKHMiFMyujDt7uf7uE89QSi8K3fRWq8ftP5mZBH9vcp6zNA8uKRN9323sg_Vp8XvgqLrTeobGDkIo'
 
     paralleldots.set_api_key("DZIrsJkyFYAvJAImeF1pCJrk2Tf7vBcrCo978uLgvvg")
 
     cur, conn = setUpDatabase('emotify.db')
+
+    cur.execute("DROP TABLE IF EXISTS Valence")
+    cur.execute("DROP TABLE IF EXISTS Energy")
+    cur.execute("DROP TABLE IF EXISTS Sentiment")
+    cur.execute("DROP TABLE IF EXISTS Emotion")
+    conn.commit() 
 
     input_text = ["I am counting my calories, yet I really want dessert.",
     "If you like tuna and tomato sauce- try combining the two. It’s really not as bad as it sounds.",
     "I would have gotten the promotion, but my attendance wasn’t good enough.",
     "I was very proud of my nickname throughout high school but today- I couldn’t be any different to what my nickname was.",
     "I really want to go to work, but I am too sick to drive."]
-
-    cur.execute("DELETE FROM Recommendations WHERE EXISTS (SELECT * FROM Recommendations)")
-    cur.execute("DELETE FROM Features WHERE EXISTS (SELECT * FROM Features)")
-    cur.execute("DELETE FROM Sentiment WHERE EXISTS (SELECT * FROM Sentiment)")
-    cur.execute("DELETE FROM Emotion WHERE EXISTS (SELECT * FROM Emotion)")
 
     sentiment_text=paralleldots.batch_sentiment(input_text)
 
@@ -176,8 +194,8 @@ def main():
         spotifyRecommendations = requests.get('https://api.spotify.com/v1/recommendations', headers=recommendation_headers, params=recommendation_params)
         spotifyRecs = spotifyRecommendations.json()
 
-        setUpSpotifyRecommendations(spotifyRecs, cur, conn)
-        setUpSpotifyFeatures(featureToken, spotifyRecs, cur, conn)
+        setUpSpotifyValence(featureToken, spotifyRecs, cur, conn)
+        setUpSpotifyEnergy(featureToken, spotifyRecs, cur, conn)
         conn.commit()
     
     conn.commit()
@@ -189,18 +207,6 @@ def main():
     setUpEmotify(cur, conn)
 
     calculatePercentageDifference(cur, conn)
-
-    
-
-    # csv_columns = ['No','Name','Country']
-    # dict_data = [
-    # {'No': 1, 'Name': 'Alex', 'Country': 'India'},
-    # {'No': 2, 'Name': 'Ben', 'Country': 'USA'},
-    # {'No': 3, 'Name': 'Shri Ram', 'Country': 'India'},
-    # {'No': 4, 'Name': 'Smith', 'Country': 'USA'},
-    # {'No': 5, 'Name': 'Yuva Raj', 'Country': 'India'},
-    # ]
-    # writeFile(csv_columns, dict_data)
 
 
 if __name__ == "__main__":
