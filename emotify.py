@@ -126,16 +126,17 @@ def setUpEmotify(cur, conn):
     data = cur.execute(selected)
 
     f = open("emotifyoutput.txt", "w")
+    f.write("(Recommended Song, % Change SONG Target | Valence TEXT Negative Sentiment, % Change SONG Target Energy | TEXT Bored Emotion)")
+    f.write("\n")
+    f.write("\n")
     for row in data:
-        f.write("RECOMMENDED SONG: <" + str(row[0]) + "> BY " + str(row[1]) + " / PERCENT CHANGE BETWEEN Valence AND Negative Sentiment: " + str(row[2]) + " / PERCENT CHANGE BETWEEN Energy AND Bored Emotion: " + str(row[3]))
+        f.write("(<" + str(row[0]) + "> by " + str(row[1]) + ", " + str(row[2]) + ", " + str(row[3]) + ")")
         f.write("\n")
         f.write("\n")
     f.close()
 
     conn.commit()
 
-def calculatePercentageDifference(cur, conn):
-    pass
 
 def main():
 
@@ -205,8 +206,6 @@ def main():
     setUpEmotion(emotion_text, spotifyRecs, cur, conn)
 
     setUpEmotify(cur, conn)
-
-    calculatePercentageDifference(cur, conn)
 
 
 if __name__ == "__main__":
