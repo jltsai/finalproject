@@ -12,9 +12,10 @@ import csv
 
 # Description: From a list of strings, the ParallelDots API will measure the emotion and sentiment of each string. 
 # This data will then be used to set the target energy and valence values to recommend songs using the Spotify API.
-# We then calculate the percent match the recommended song is (for valence/energy) to the sentiment/emotion of the input text string.
+# We then calculated the percent match the recommended song is (for the actual valence/energy values) to the sentiment/emotion of the input text string.
 # The more negative sentiment there is, the higher the target valence set for the recommended song.
 # The more bored emotion there is, the higher the target energy set for the recommended song.
+# Lastly, we produced three visualizations of our calculated data (percent changes)
 
 def setUpDatabase(db_name):
     path = os.path.dirname(os.path.abspath(__file__))
@@ -126,7 +127,7 @@ def setUpEmotify(cur, conn):
     data = cur.execute(selected)
 
     f = open("emotifyoutput.txt", "w")
-    f.write("(Recommended Song, % Change SONG Target Valence | TEXT Negative Sentiment, % Change SONG Target Energy | TEXT Bored Emotion)")
+    f.write("(Recommended Song, % Change SONG Actual Valence | TEXT Negative Sentiment, % Change SONG Actual Energy | TEXT Bored Emotion)")
     f.write("\n")
     f.write("\n")
     for row in data:
@@ -140,10 +141,10 @@ def setUpEmotify(cur, conn):
 def main():
 
     # https://developer.spotify.com/documentation/web-api/reference/browse/get-recommendations/
-    recommendationToken = 'BQDzWVma4UXNlz8btF6sl5yFhvkQDpUChA0Ong0oCoVHpkqI5hLMBNWRiktgK-_fe3uHMN4YOOWt9HmvSHqY_-uou20SMHXB0I6IeXFbxs4jt7uz421JEMFTGho2thBV2SYmLwKL-NpAJAo'
+    recommendationToken = 'BQBHOYwD4SvHekv_FpdRoFLgWNGW7_dirrgPd2xjFrEBZy-tNy7RsLOQlQjNc15SliWzfeo_fJa3jdRx06JqBEhxRnF2dV9-3gc4bmHHz-WBiWFSi57VWOVG1HHbpeqZibXDTAXkveB92Uc'
 
     # https://developer.spotify.com/documentation/web-api/reference/tracks/ choose the link to /v1/audio-features/{id}
-    featureToken = 'BQCqpNsO3CrS9AcUAS5PwTsJaGcmsEfTQljtITwdeO5BX1nS4XHQ7NggRuu46I_QlQ-YiNNLpZpTy48uhiR2lFRKLu8pXA8CoKS6dS8rz9ts_felUN3crifsX1cHPmWUMXa_UCpixgKRrDE'
+    featureToken = 'BQDRAn4Ip5H0T86o3b9hgMAB-H-IK5OUq8FlYfkWiNHNILf2HXrev4GYzPSzaoHLIYXFsyQ-3zWZzwetGYJz8DSR7X5Du23CUWhgAqbzjMHteTtcbMdSkIvWPP-SxvFMVZp7xvYCdDVMI2k'
 
     paralleldots.set_api_key("CWTPMu1Z9kaCUVeghKKecMyXLbfZPpfUWEnjytlHh4Q")
 
